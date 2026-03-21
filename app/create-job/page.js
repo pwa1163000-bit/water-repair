@@ -11,6 +11,7 @@ import {
 
 export default function CreateJob() {
   const [title, setTitle] = useState("");
+  const [location, setLocation] = useState(null);
 
   // 🔥 ฟังก์ชันสร้างเลขงาน
   const getNextJobNo = async () => {
@@ -41,12 +42,13 @@ export default function CreateJob() {
     try {
       const jobNo = await getNextJobNo();
 
-      await addDoc(collection(db, "jobs"), {
-        title: title,
-        status: "รอซ่อม",
-        jobNo: jobNo,
-        createdAt: new Date(),
-      });
+await addDoc(collection(db, "jobs"), {
+  title: title,
+  status: "รอซ่อม",
+  jobNo: jobNo,
+  createdAt: new Date(),
+  location: location, // 👈 เพิ่มบรรทัดนี้
+});
 
       setTitle("");
       alert("บันทึกสำเร็จ: " + jobNo);
@@ -57,16 +59,37 @@ export default function CreateJob() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>➕ แจ้งงานซ่อม</h1>
+  <div style={{ padding: 20 }}>
+    <h1>➕ แจ้งงานซ่อม</h1>
 
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="เช่น ท่อแตก"
-      />
+    <input
+      value={title}
+      onChange={(e) => setTitle(e.target.value)}
+      placeholder="เช่น ท่อแตก"
+    />
 
-      <button onClick={handleSubmit}>บันทึก</button>
-    </div>
-  );
-}
+    {/* 🔥 ปุ่ม GPS ใส่ตรงนี้ */}
+    <button
+      onClick={() => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            });
+            alert("ได้พิกัดแล้ว");
+          },
+          () => alert("เปิด GPS ก่อน")
+        );
+      }}
+      style={{ display: "block", marginTop: 10 }}
+    >
+      📍 ดึงพิกัด
+    </button>
+
+    {/* 🔥 ปุ่มบันทึก */}
+    <button onClick={handleSubmit} style={{ marginTop: 10 }}>
+      บันทึก
+    </button>
+  </div>
+);
