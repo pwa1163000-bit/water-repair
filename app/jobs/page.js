@@ -11,7 +11,12 @@ import {
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
-
+const getColor = (status) => {
+  if (status === "รอซ่อม") return "red";
+  if (status === "กำลังซ่อม") return "orange";
+  if (status === "เสร็จแล้ว") return "green";
+  return "black";
+};
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
@@ -51,7 +56,19 @@ export default function JobsPage() {
           >
             <p><b>เลขงาน:</b> {job.jobNo || "-"}</p>
             <p><b>รายละเอียด:</b> {job.title}</p>
-            <p><b>สถานะ:</b> {job.status}</p>
+            <p><b>สถานะ:</b>{" "}
+  <span
+    style={{
+      backgroundColor: getColor(job.status),
+      color: "white",
+      padding: "4px 10px",
+      borderRadius: "8px",
+      fontSize: "14px",
+    }}
+  >
+    {job.status}
+  </span>
+</p>
 
             <div style={{ marginTop: 10 }}>
               <button onClick={() => updateStatus(job.id, "รอซ่อม")}>
