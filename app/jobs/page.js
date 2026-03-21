@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
 
   useEffect(() => {
-    // 🔥 realtime
     const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -19,6 +23,14 @@ export default function JobsPage() {
 
     return () => unsubscribe();
   }, []);
+
+  // 🔥 เปลี่ยนสถานะ
+  const updateStatus = async (id, newStatus) => {
+    const ref = doc(db, "jobs", id);
+    await updateDoc(ref, {
+      status: newStatus,
+    });
+  };
 
   return (
     <div style={{ padding: 20 }}>
@@ -40,6 +52,20 @@ export default function JobsPage() {
             <p><b>เลขงาน:</b> {job.jobNo || "-"}</p>
             <p><b>รายละเอียด:</b> {job.title}</p>
             <p><b>สถานะ:</b> {job.status}</p>
+
+            <div style={{ marginTop: 10 }}>
+              <button onClick={() => updateStatus(job.id, "รอซ่อม")}>
+                🔴 รอซ่อม
+              </button>
+
+              <button onClick={() => updateStatus(job.id, "กำลังซ่อม")}>
+                🟡 กำลังซ่อม
+              </button>
+
+              <button onClick={() => updateStatus(job.id, "เสร็จแล้ว")}>
+                🟢 เสร็จแล้ว
+              </button>
+            </div>
           </div>
         ))
       )}
