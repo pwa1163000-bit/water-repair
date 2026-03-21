@@ -1,71 +1,69 @@
 "use client";
 
 import { useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "../../lib/firebase";
 import {
   collection,
   addDoc,
   doc,
-  runTransaction
+  runTransaction,
 } from "firebase/firestore";
 
 export default function CreateJob() {
   const [title, setTitle] = useState("");
 
-  // 🔥 สร้างเลขงานอัตโนมัติ
+  // 🔥 ฟังก์ชันสร้างเลขงาน
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
 
-    const jobNo = await runTransaction(db, async (transaction) => {
+    return await runTransaction(db, async (transaction) => {
       const counterDoc = await transaction.get(counterRef);
 
-      let current = 0;
-
       if (!counterDoc.exists()) {
-        current = 1;
-        transaction.set(counterRef, { current });
-      } else {
-        current = counterDoc.data().current + 1;
-        transaction.update(counterRef, { current });
+        throw "Counter not found!";
       }
 
-      const year = new Date().getFullYear().toString().slice(-2);
+      let newCount = counterDoc.data().current + 1;
 
-      return `${String(current).padStart(3, "0")}/${year}`;
+      transaction.update(counterRef, { current: newCount });
+
+      // format 001/69
+      const year = "69";
+      const jobNo = String(newCount).padStart(3, "0") + "/" + year;
+
+      return jobNo;
     });
-
-    return jobNo;
   };
 
-  // 🔥 บันทึกงาน
   const handleSubmit = async () => {
+    if (!title) return alert("กรอกข้อมูลก่อน");
+
     try {
       const jobNo = await getNextJobNo();
 
       await addDoc(collection(db, "jobs"), {
-        jobNo,
-        title,
+        title: title,
         status: "รอซ่อม",
-        createdAt: new Date()
+        jobNo: jobNo,
+        createdAt: new Date(),
       });
 
-      alert("บันทึกสำเร็จ: " + jobNo);
       setTitle("");
-
-    } catch (err) {
-      console.error(err);
-      alert("เกิดข้อผิดพลาด");
+      alert("บันทึกสำเร็จ: " + jobNo);
+    } catch (error) {
+      console.error(error);
+      alert("error");
     }
   };
 
   return (
-    <div>
-      <h1>แจ้งงาน</h1>
+    <div style={{ padding: 20 }}>
+      <h1>➕ แจ้งงานซ่อม</h1>
 
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="รายละเอียดงาน"
+        placeholder="เช่น ท่อแตก"
       />
 
       <button onClick={handleSubmit}>บันทึก</button>
