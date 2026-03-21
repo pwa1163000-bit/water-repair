@@ -68,24 +68,30 @@ await addDoc(collection(db, "jobs"), {
       placeholder="เช่น ท่อแตก"
     />
 
-    {/* 📍 ปุ่ม GPS */}
-    <button
-      onClick={() => {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setLocation({
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            });
-            alert("ได้พิกัดแล้ว");
-          },
-          () => alert("เปิด GPS ก่อน")
-        );
-      }}
-      style={{ display: "block", marginTop: 10 }}
-    >
-      📍 ดึงพิกัด
-    </button>
+    {/* 📍 แสดง GPS */}
+{location && (
+  <p style={{ marginTop: 10 }}>
+    📍 พิกัด: {location.lat}, {location.lng}
+  </p>
+)}
+
+{/* 📍 ปุ่ม GPS */}
+<button
+  onClick={() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        alert("ได้พิกัดแล้ว");
+      },
+      () => alert("เปิด GPS ก่อน")
+    );
+  }}
+>
+  📍 ดึงพิกัด
+</button>
 
     {/* 💾 ปุ่มบันทึก */}
     <button onClick={handleSubmit} style={{ marginTop: 10 }}>
