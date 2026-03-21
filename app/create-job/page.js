@@ -68,7 +68,7 @@ await addDoc(collection(db, "jobs"), {
       placeholder="เช่น ท่อแตก"
     />
 
-    {/* 🔥 ปุ่ม GPS ใส่ตรงนี้ */}
+    {/* 📍 ปุ่ม GPS */}
     <button
       onClick={() => {
         navigator.geolocation.getCurrentPosition(
@@ -87,9 +87,10 @@ await addDoc(collection(db, "jobs"), {
       📍 ดึงพิกัด
     </button>
 
-    {/* 🔥 ปุ่มบันทึก */}
+    {/* 💾 ปุ่มบันทึก */}
     <button onClick={handleSubmit} style={{ marginTop: 10 }}>
       บันทึก
     </button>
   </div>
 );
+}
