@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 
-// 💡 ใช้ Dynamic Import เพื่อป้องกัน Error "window is not defined" ใน Next.js
+// 💡 โหลด Component แบบ Dynamic เพื่อรองรับ SSR
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
@@ -17,22 +17,23 @@ export default function MapPage() {
   const [jobs, setJobs] = useState([]);
   const [L, setL] = useState(null);
 
-  // โหลด Leaflet Library เฉพาะฝั่ง Client
   useEffect(() => {
+    // โหลด Leaflet Library เฉพาะฝั่ง Client
     import("leaflet").then((leaflet) => {
-      setL(leaflet);
+      setL(leaflet.default || leaflet);
     });
-  }, []);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
+    // ดึงข้อมูลแบบเรียงลำดับเวลาล่าสุด
+    const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setJobs(data);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // ฟังก์ชันเลือกสีหมุด
+  // ฟังก์ชันเลือกสีหมุดตามสถานะ
   const getCustomIcon = (status) => {
     if (!L) return null;
     let color = "blue";
@@ -50,41 +51,77 @@ export default function MapPage() {
     });
   };
 
-  if (!L) return <p style={{ padding: 20 }}>กำลังโหลดระบบแผนที่...</p>;
+  if (!L) return <div style={{ padding: "20px", textAlign: "center" }}>⏳ กำลังโหลดระบบแผนที่...</div>;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1 style={{ fontSize: "22px", marginBottom: "15px" }}>🗺️ แผนที่ภาพรวมจุดแจ้งซ่อม (PWA)</h1>
+    <div style={{ padding: "10px", height: "100vh", display: "flex", flexDirection: "column" }}>
+      <h2 style={{ fontSize: "20px", marginBottom: "10px", color: "#2c3e50" }}>
+        📍 แผนที่จุดซ่อมท่อทั้งหมด (กปภ. ท่าเรือ)
+      </h2>
       
-      <div style={{ height: "80vh", width: "100%", borderRadius: "12px", overflow: "hidden", border: "1px solid #ddd" }}>
-        <MapContainer center={[14.5655, 100.7196]} zoom={12} style={{ height: "100%", width: "100%" }}>
+      <div style={{ flex: 1, width: "100%", borderRadius: "12px", overflow: "hidden", border: "1px solid #ddd", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
+        <MapContainer 
+          center={[14.5655, 100.7196]} 
+          zoom={13} 
+          style={{ height: "100%", width: "100%" }}
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution='&copy; OpenStreetMap'
           />
 
-          {/* 🟢 ระบบ Marker Cluster จะรวมกลุ่มหมุดที่อยู่ใกล้กันให้อัตโนมัติ */}
           <MarkerClusterGroup>
             {jobs.map((job) => (
-              job.location && (
+              job.location?.lat && job.location?.lng && (
                 <Marker 
                   key={job.id} 
                   position={[job.location.lat, job.location.lng]} 
                   icon={getCustomIcon(job.status)}
                 >
                   <Popup>
-                    <div style={{ minWidth: "150px" }}>
-                      <p><b>เลขงาน:</b> {job.jobNo}</p>
-                      <p><b>สถานะ:</b> <span style={{ color: job.status === "รอซ่อม" ? "red" : "green" }}>{job.status}</span></p>
-                      <p><b>รายละเอียด:</b> {job.title}</p>
-                      <hr />
+                    <div style={{ minWidth: "180px", fontFamily: "Sarabun, sans-serif" }}>
+                      {/* แสดงรูปภาพถ้ามี */}
+                      {job.imageUrl && (
+                        <img 
+                          src={job.imageUrl} 
+                          alt="หน้างาน" 
+                          style={{ width: "100%", borderRadius: "8px", marginBottom: "8px" }} 
+                        />
+                      )}
+                      
+                      <p style={{ margin: "2px 0" }}><b>เลขงาน:</b> {job.jobNo || "ไม่มีข้อมูล"}</p>
+                      <p style={{ margin: "2px 0" }}>
+                        <b>สถานะ:</b> 
+                        <span style={{ 
+                          color: job.status === "รอซ่อม" ? "#e74c3c" : 
+                                 job.status === "กำลังซ่อม" ? "#f39c12" : "#2ecc71",
+                          fontWeight: "bold",
+                          marginLeft: "5px"
+                        }}>
+                          {job.status}
+                        </span>
+                      </p>
+                      <p style={{ margin: "2px 0", fontSize: "13px" }}><b>รายละเอียด:</b> {job.title}</p>
+                      
+                      <hr style={{ border: "0.5px solid #eee", margin: "8px 0" }} />
+                      
                       <a 
                         href={`https://www.google.com/maps?q=${job.location.lat},${job.location.lng}`} 
                         target="_blank" 
                         rel="noreferrer"
-                        style={{ color: "#0070f3", textDecoration: "none" }}
+                        style={{ 
+                          display: "block",
+                          textAlign: "center",
+                          backgroundColor: "#4285F4",
+                          color: "white",
+                          padding: "8px",
+                          borderRadius: "5px",
+                          textDecoration: "none",
+                          fontSize: "13px",
+                          fontWeight: "bold"
+                        }}
                       >
-                        📍 นำทางด้วย Google Maps
+                        🚗 นำทางด้วย Google Maps
                       </a>
                     </div>
                   </Popup>
