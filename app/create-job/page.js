@@ -10,10 +10,9 @@ export default function CreateJob() {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🔑 สำคัญ: ใส่ API Key ของคุณที่นี่ (เอามาจาก https://api.imgbb.com/)
-  const IMGBB_API_KEY = "image=R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; 
+  // 🔑 นำรหัสจากหน้า https://api.imgbb.com/ มาวางตรงนี้ครับ
+  const IMGBB_API_KEY = "วาง_API_KEY_ของคุณตรงนี้"; 
 
-  // 🔢 ฟังก์ชันรันเลขที่งาน (เช่น 001/69)
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
     return await runTransaction(db, async (transaction) => {
@@ -31,28 +30,24 @@ export default function CreateJob() {
 
     try {
       let imageUrl = "";
-
-      // 📸 ส่งรูปไปฝากที่ ImgBB
       if (image) {
         const formData = new FormData();
-        formData.append("image", image);
+        formData.append("image", image); // ใช้ 'image' ตามคู่มือ ImgBB
 
         const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-          method: "POST",
+          method: "POST", // ต้องใช้ POST เสมอ
           body: formData,
         });
 
         const result = await response.json();
         if (result.success) {
-          imageUrl = result.data.url; // ได้ลิงก์รูปภาพมาเก็บในฐานข้อมูล
+          imageUrl = result.data.url; 
         }
       }
 
       const jobNo = await getNextJobNo();
-      
-      // 📝 บันทึกข้อมูลทั้งหมดลง Firebase Firestore
       await addDoc(collection(db, "jobs"), {
-        title,
+        title: title.trim(),
         status: "รอซ่อม",
         jobNo,
         imageUrl, 
@@ -71,36 +66,28 @@ export default function CreateJob() {
 
   return (
     <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
-      <h2 style={{ color: "#0056b3" }}>➕ แจ้งซ่อมพร้อมรูปถ่าย (กปภ.)</h2>
+      <h2>➕ แจ้งซ่อม (กปภ. ท่าเรือ)</h2>
       <hr />
-      
       <div style={{ marginTop: "20px" }}>
         <label>รายละเอียดอาการ:</label>
         <textarea
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="ระบุอาการ เช่น ท่อแตกหน้าบ้าน..."
+          placeholder="ระบุอาการท่อแตก/รั่ว..."
           style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
         />
       </div>
-
       <div style={{ marginTop: "20px" }}>
         <label>📸 ถ่ายรูปหน้างาน:</label>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment" // เปิดกล้องมือถืออัตโนมัติ
-          onChange={(e) => setImage(e.target.files[0])}
-          style={{ display: "block", marginTop: "10px" }}
-        />
+        <input type="file" accept="image/*" capture="environment" onChange={(e) => setImage(e.target.files[0])} style={{ display: "block", marginTop: "10px" }} />
       </div>
-
       <div style={{ marginTop: "20px" }}>
         <button
           onClick={() => {
             navigator.geolocation.getCurrentPosition(
               (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => alert("กรุณาเปิด GPS")
+              () => alert("กรุณาเปิด GPS"),
+              { enableHighAccuracy: true }
             );
           }}
           style={{ padding: "10px", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}
@@ -108,24 +95,13 @@ export default function CreateJob() {
           📍 {location ? "ได้พิกัดแล้ว ✅" : "คลิกเพื่อดึงพิกัดปัจจุบัน"}
         </button>
       </div>
-
       <button 
         onClick={handleSubmit} 
         disabled={loading}
-        style={{ 
-          marginTop: "30px", 
-          width: "100%", 
-          padding: "15px", 
-          backgroundColor: loading ? "#ccc" : "#2ecc71", 
-          color: "white", 
-          border: "none", 
-          borderRadius: "8px",
-          fontWeight: "bold",
-          cursor: loading ? "not-allowed" : "pointer"
-        }}
+        style={{ marginTop: "30px", width: "100%", padding: "15px", backgroundColor: loading ? "#ccc" : "#2ecc71", color: "white", border: "none", borderRadius: "8px", fontWeight: "bold" }}
       >
-        {loading ? "กำลังบันทึกและอัปโหลดรูป..." : "💾 บันทึกแจ้งซ่อม"}
+        {loading ? "กำลังบันทึก..." : "💾 บันทึกแจ้งซ่อม"}
       </button>
     </div>
   );
-}
+} // ปิดฟังก์ชัน CreateJob ให้ครบถ้วน
