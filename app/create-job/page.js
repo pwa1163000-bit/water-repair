@@ -15,6 +15,7 @@ export default function CreateJob() {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // ฟังก์ชันรันเลขที่งานอัตโนมัติ (เช่น 001/69)
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
     return await runTransaction(db, async (transaction) => {
@@ -40,44 +41,62 @@ export default function CreateJob() {
       });
       setTitle("");
       setLocation(null);
-      alert("บันทึกสำเร็จ: " + jobNo);
+      alert("บันทึกสำเร็จ เลขงาน: " + jobNo);
     } catch (e) {
-      alert("Error: " + e.message);
+      alert("เกิดข้อผิดพลาด: " + e.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>➕ แจ้งงานซ่อม</h1>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="เช่น ท่อแตก"
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      />
+    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
+      <h1>➕ แจ้งงานซ่อม (กปภ.)</h1>
+      <hr />
+      
+      <div style={{ marginTop: "20px" }}>
+        <label>รายละเอียดอาการ:</label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="เช่น ท่อแตก, น้ำไม่ไหล"
+          style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
+        />
+      </div>
 
-      <button
-        onClick={() => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            () => alert("กรุณาเปิด GPS")
-          );
-        }}
-      >
-        📍 ดึงพิกัด
-      </button>
-
-      {location && <p>📍 พิกัด: {location.lat}, {location.lng}</p>}
+      <div style={{ marginTop: "20px" }}>
+        <button
+          onClick={() => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              () => alert("กรุณาเปิด GPS บนมือถือ")
+            );
+          }}
+          style={{ padding: "10px", cursor: "pointer", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "8px" }}
+        >
+          📍 คลิกเพื่อดึงพิกัดปัจจุบัน
+        </button>
+        {location && <p style={{ marginTop: "10px", color: "green" }}>✅ ได้พิกัดแล้ว: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>}
+      </div>
 
       <button 
         onClick={handleSubmit} 
         disabled={loading}
-        style={{ marginTop: 10, display: "block", width: "100%", padding: 10 }}
+        style={{ 
+          marginTop: "30px", 
+          width: "100%", 
+          padding: "15px", 
+          backgroundColor: loading ? "#ccc" : "#2ecc71", 
+          color: "white", 
+          border: "none", 
+          borderRadius: "8px",
+          fontWeight: "bold",
+          fontSize: "16px",
+          cursor: loading ? "not-allowed" : "pointer"
+        }}
       >
-        {loading ? "กำลังบันทึก..." : "บันทึก"}
+        {loading ? "กำลังบันทึกข้อมูล..." : "💾 บันทึกแจ้งซ่อม"}
       </button>
     </div>
-  ); // ปิด Return
-} // 👈 ปิด Export Function
+  );
+}
