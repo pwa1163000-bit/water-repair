@@ -1,26 +1,25 @@
 "use client";
-import { useState, useEffect } from "react"; // เพิ่ม useEffect
+import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// โหลด MapPicker แบบพิเศษ (SSR: false)
-const MapPicker = dynamic(() => import("../../components/MapPicker"), { 
+// ✅ แก้ไข Path ตรงนี้: เปลี่ยนจาก ../../ เป็น ../ เพราะเราย้ายโฟลเดอร์เข้ามาใน app แล้ว
+const MapPicker = dynamic(() => import("../components/MapPicker"), { 
   ssr: false,
   loading: () => <div style={{ height: "300px", background: "#eee", textAlign: "center", paddingTop: "140px" }}>กำลังโหลดแผนที่...</div>
 });
 
 export default function CreateJob() {
   const router = useRouter();
-  const [hasMounted, setHasMounted] = useState(false); // เพิ่มสถานะการโหลดหน้าจอ
+  const [hasMounted, setHasMounted] = useState(false);
   const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 });
   const [description, setDescription] = useState("");
   const [jobType, setJobType] = useState("ท่อแตกรั่ว");
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // เช็คว่าหน้าเว็บโหลดฝั่ง Client เสร็จหรือยัง
   useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -59,7 +58,6 @@ export default function CreateJob() {
       <div style={{ marginBottom: "15px" }}>
         <label style={{ fontWeight: "bold" }}>📍 จิ้มเลือกจุดบนแผนที่:</label>
         <div style={{ height: "300px", width: "100%", marginTop: "10px", borderRadius: "10px", overflow: "hidden", border: "2px solid #007bff", position: "relative" }}>
-          {/* แก้ไขตรงนี้: ถ้าหน้ายังโหลดไม่เสร็จ ให้แสดงกล่องสีเทารอไว้ก่อน เพื่อป้องกัน Error */}
           {hasMounted ? (
             <MapPicker location={location} setLocation={setLocation} />
           ) : (
