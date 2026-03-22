@@ -45,6 +45,7 @@ export default function CreateJob() {
       setUploading(true);
 
       // --- ส่วนที่เพิ่มใหม่: ระบบรันเลขงานอัตโนมัติ ---
+      const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 });
       const jobQuery = query(collection(db, "jobs"));
       const querySnapshot = await getDocs(jobQuery);
       const totalJobs = querySnapshot.size; // นับจำนวนงานที่มีอยู่แล้ว
