@@ -46,22 +46,32 @@ export default function Dashboard() {
 
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳ กำลังโหลดข้อมูล...</div>;
 
-  return (
-    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto", fontFamily: "sans-serif" }}>
-      <h1 style={{ color: "#1e293b", marginBottom: "20px" }}>📊 ระบบสรุปงาน กปภ. ท่าเรือ</h1>
+// ... (โค้ดส่วนบนเหมือนเดิมจนถึงส่วน return) ...
 
-      <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", justifyContent: "center" }}>
-        
+  return (
+    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto", fontFamily: "sans-serif", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      <header style={{ marginBottom: "30px", textAlign: "center" }}>
+        <h1 style={{ color: "#1e293b", margin: 0, fontSize: "24px" }}>📊 ระบบสรุปงาน กปภ. ท่าเรือ</h1>
+        <p style={{ color: "#64748b", fontSize: "14px", marginTop: "5px" }}>อัปเดตสถานะงานซ่อมท่อและบริการผู้ใช้น้ำ</p>
+      </header>
+
+      {/* สถิติหลัก */}
+      <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", justifyContent: "center", marginBottom: "30px" }}>
         <Box title="งานทั้งหมด" value={total} color="#475569" icon="📋" />
         <Box title="รอซ่อม" value={pending} color="#ef4444" icon="🔴" />
         <Box title="กำลังซ่อม" value={working} color="#f59e0b" icon="🟠" />
         <Box title="เสร็จแล้ว" value={done} color="#10b981" icon="✅" />
         <Box title="งานวันนี้" value={todayJobs} color="#3b82f6" icon="📅" />
-
       </div>
 
-      <div style={{ marginTop: "30px", textAlign: "center" }}>
-        <p style={{ color: "#94a3b8", fontSize: "14px" }}>
+      {/* 🚀 เพิ่มเมนูทางลัด (Shortcuts) */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxWidth: "500px", margin: "0 auto" }}>
+        <a href="/create" style={navButtonStyle("#3b82f6")}>➕ แจ้งซ่อมใหม่</a>
+        <a href="/jobs" style={navButtonStyle("#1e293b")}>📝 จัดการงานซ่อม</a>
+      </div>
+
+      <div style={{ marginTop: "40px", textAlign: "center" }}>
+        <p style={{ color: "#94a3b8", fontSize: "12px" }}>
           อัปเดตข้อมูลล่าสุด: {new Date().toLocaleTimeString('th-TH')} น.
         </p>
       </div>
@@ -69,24 +79,18 @@ export default function Dashboard() {
   );
 }
 
-// 🎨 Component กล่องแสดงผล (ปรับให้สวยขึ้น)
-function Box({ title, value, color, icon }) {
-  return (
-    <div
-      style={{
-        background: color,
-        color: "white",
-        padding: "25px 20px",
-        borderRadius: "15px",
-        minWidth: "160px",
-        textAlign: "center",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-        flex: "1 1 180px"
-      }}
-    >
-      <div style={{ fontSize: "24px", marginBottom: "10px" }}>{icon}</div>
-      <h3 style={{ margin: "0 0 10px 0", fontSize: "16px", fontWeight: "400", opacity: 0.9 }}>{title}</h3>
-      <h1 style={{ margin: 0, fontSize: "36px", fontWeight: "bold" }}>{value}</h1>
-    </div>
-  );
-}
+// สไตล์ปุ่มเมนูทางลัด
+const navButtonStyle = (bgColor) => ({
+  display: "block",
+  padding: "15px",
+  backgroundColor: bgColor,
+  color: "white",
+  textAlign: "center",
+  textDecoration: "none",
+  borderRadius: "12px",
+  fontWeight: "bold",
+  fontSize: "14px",
+  boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+});
+
+// ... (Component Box ด้านล่างคงเดิม) ...
