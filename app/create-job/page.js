@@ -11,7 +11,7 @@ export default function CreateJob() {
   const [loading, setLoading] = useState(false);
 
   // 🔑 นำรหัสจากหน้า https://api.imgbb.com/ มาวางตรงนี้ครับ
-  const IMGBB_API_KEY = "วาง_API_KEY_ของคุณตรงนี้"; 
+  const IMGBB_API_KEY = "64e2261d33f516b0a748c0d7fb105e2e; 
 
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
