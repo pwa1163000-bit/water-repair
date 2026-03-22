@@ -1,13 +1,16 @@
 "use client";
 import { useState } from "react";
+import { db } from "@/lib/firebase"; // เชื่อมต่อฐานข้อมูล
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 export default function CreateJob() {
+  const router = useRouter();
   const [location, setLocation] = useState({ lat: "", lng: "" });
   const [description, setDescription] = useState("");
   const [jobType, setJobType] = useState("ท่อแตกรั่ว");
   const [isUrgent, setIsUrgent] = useState(false);
   
-  // สำหรับระบบรูปภาพ ImgBB
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -20,6 +23,8 @@ export default function CreateJob() {
           lng: position.coords.longitude,
         });
         alert("ปักหมุดสำเร็จ!");
+      }, (error) => {
+        alert("กรุณาเปิด GPS บนมือถือของท่าน");
       });
     } else {
       alert("มือถือของคุณไม่รองรับการดึงพิกัด");
@@ -35,7 +40,6 @@ export default function CreateJob() {
     const formData = new FormData();
     formData.append("image", file);
 
-    // *** อย่าลืมเปลี่ยนเป็น API KEY ของคุณจากเว็บ ImgBB ***
     const apiKey = "64e2261d33f516b0a748c0d7fb105e2e"; 
 
     try {
@@ -55,23 +59,33 @@ export default function CreateJob() {
     }
   };
 
-  // 3. ฟังก์ชันส่งข้อมูลรวม (จะเชื่อมต่อ Firebase ในขั้นถัดไป)
-  const handleSubmit = () => {
+  // 3. ฟังก์ชันส่งข้อมูลเข้า Firebase Firestore
+  const handleSubmit = async () => {
     if (!location.lat || !imageUrl) {
       alert("กรุณาปักพิกัดและถ่ายรูปก่อนส่งงานครับ");
       return;
     }
-    
-    console.log("ข้อมูลที่พร้อมส่ง:", {
-      jobType,
-      description,
-      location,
-      imageUrl,
-      isUrgent,
-      timestamp: new Date()
-    });
-    
-    alert("ข้อมูลพร้อมส่ง! (ขั้นตอนถัดไปเราจะบันทึกลง Firebase)");
+
+    try {
+      setUploading(true);
+      await addDoc(collection(db, "jobs"), {
+        jobType,
+        description,
+        location,
+        imageUrl,
+        isUrgent,
+        status: "รอซ่อม", // สถานะเริ่มต้นสำหรับ Dashboard
+        createdAt: serverTimestamp(),
+      });
+
+      alert("ส่งงานเข้าสู่ระบบสำเร็จ!");
+      router.push("/dashboard"); // ส่งเสร็จแล้วเด้งไปหน้า Dashboard ทันที
+    } catch (error) {
+      console.error(error);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -79,7 +93,6 @@ export default function CreateJob() {
       <h2 style={{ textAlign: "center", color: "#0056b3" }}>📋 เปิดงานซ่อมท่อใหม่</h2>
       <hr />
       
-      {/* ส่วนที่ 1: รายละเอียด */}
       <div style={{ marginBottom: "15px" }}>
         <label>ลักษณะที่แตก/ชำรุด:</label>
         <select 
@@ -87,32 +100,4 @@ export default function CreateJob() {
           onChange={(e) => setJobType(e.target.value)}
           style={{ width: "100%", padding: "12px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
         >
-          <option>ท่อแตกรั่ว</option>
-          <option>น้ำไหลอ่อน/ไม่ไหล</option>
-          <option>ประตูน้ำชำรุด</option>
-          <option>มาตรวัดน้ำชำรุด</option>
-        </select>
-      </div>
-
-      <div style={{ marginBottom: "15px" }}>
-        <label>ที่อยู่ / จุดสังเกตคราวๆ:</label>
-        <textarea 
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="เช่น หน้าบ้านเลขที่... หรือ ใกล้โรงเรียน..." 
-          style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc", height: "80px" }} 
-        />
-      </div>
-
-      {/* ส่วนที่ 2: รูปภาพ */}
-      <div style={{ marginBottom: "15px", border: "2px dashed #007bff", padding: "15px", borderRadius: "10px", textAlign: "center", backgroundColor: "#f8f9fa" }}>
-        <label style={{ fontWeight: "bold", display: "block", marginBottom: "10px" }}>📷 ถ่ายรูปสภาพหน้างาน:</label>
-        <input 
-          type="file" 
-          accept="image/*" 
-          capture="environment" 
-          onChange={handleUploadImage}
-          style={{ marginBottom: "10px" }}
-        />
-        {uploading && <p style={{ color: "orange" }}>กำลังอัปโหลดรูป...</p>}
-        {imageUrl &&
+          <option>ท่อแตกรั่ว</
