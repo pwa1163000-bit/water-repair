@@ -36,7 +36,7 @@ export default function CreateJob() {
     formData.append("image", file);
 
     // *** อย่าลืมเปลี่ยนเป็น API KEY ของคุณจากเว็บ ImgBB ***
-    const apiKey = "ใส่_API_KEY_ของคุณที่นี่"; 
+    const apiKey = "64e2261d33f516b0a748c0d7fb105e2e"; 
 
     try {
       const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
