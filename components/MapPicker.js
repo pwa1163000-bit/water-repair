@@ -1,37 +1,44 @@
-// components/MapPicker.js
+"use client";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-export default function MapPicker({ location, setLocation }) {
-  // 1. ตรวจสอบว่ารันบน Browser หรือไม่ (ป้องกัน Error Window is not defined)
-  if (typeof window === "undefined") return null;
+// แก้ไข Icon หมุดให้แสดงผลถูกต้อง
+const customIcon = new L.Icon({
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
-  // 2. ตั้งค่า Icon ของหมุด (ถ้าไม่ใส่ หมุดจะไม่ขึ้นรูป)
-  const icon = L.icon({ 
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png", 
-    iconSize: [25, 41], 
-    iconAnchor: [12, 41] 
+// ส่วนประกอบสำหรับดักจับการคลิกบนแผนที่
+function LocationMarker({ location, setLocation }) {
+  useMapEvents({
+    click(e) {
+      // เมื่อคลิกปุ๊บ ให้เปลี่ยนพิกัดเป็นจุดที่คลิกทันที
+      setLocation(e.latlng);
+    },
   });
 
-  // 3. ฟังก์ชันสำหรับคลิกที่แผนที่เพื่อย้ายหมุด
-  function LocationMarker() {
-    useMapEvents({
-      click(e) {
-        setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-      },
-    });
-    return <Marker position={[location.lat, location.lng]} icon={icon} />;
-  }
+  return location ? (
+    <Marker position={location} icon={customIcon}></Marker>
+  ) : null;
+}
 
+export default function MapPicker({ location, setLocation }) {
   return (
-    <MapContainer 
-      center={[location.lat, location.lng]} 
-      zoom={15} 
+    <MapContainer
+      center={location}
+      zoom={15}
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <LocationMarker />
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      />
+      {/* เรียกใช้งานการปักหมุดเมื่อคลิก */}
+      <LocationMarker location={location} setLocation={setLocation} />
     </MapContainer>
   );
 }
