@@ -1,121 +1,112 @@
 "use client";
 
 import { useState } from "react";
-import { db } from "../../lib/firebase"; // ตรวจสอบว่า Path ถูกต้อง
-import {
-  collection,
-  addDoc,
-  doc,
-  runTransaction,
-  serverTimestamp,
-} from "firebase/firestore";
+import { db } from "../../lib/firebase"; 
+import { collection, addDoc, doc, runTransaction, serverTimestamp } from "firebase/firestore";
 
 export default function CreateJob() {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState(null);
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ฟังก์ชันรันเลขที่งานอัตโนมัติ (เช่น 001/69)
+  // 🔑 สำคัญ: ใส่ API Key ของคุณที่นี่ (เอามาจาก https://api.imgbb.com/)
+  const IMGBB_API_KEY = "image=R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; 
+
+  // 🔢 ฟังก์ชันรันเลขที่งาน (เช่น 001/69)
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
-    try {
-      return await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        // ถ้ายังไม่มี Counter ให้เริ่มที่ 1
-        let newCount = counterDoc.exists() ? counterDoc.data().current + 1 : 1;
-        transaction.set(counterRef, { current: newCount });
-        
-        // คำนวณปี พ.ศ. (ค.ศ. + 543)
-        const year = (new Date().getFullYear() + 543).toString().slice(-2);
-        return String(newCount).padStart(3, "0") + "/" + year;
-      });
-    } catch (err) {
-      console.error("Counter error:", err);
-      return "ERROR";
-    }
+    return await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      let newCount = counterDoc.exists() ? counterDoc.data().current + 1 : 1;
+      transaction.set(counterRef, { current: newCount });
+      const year = (new Date().getFullYear() + 543).toString().slice(-2);
+      return String(newCount).padStart(3, "0") + "/" + year;
+    });
   };
 
   const handleSubmit = async () => {
-    if (!title) return alert("กรุณากรอกรายละเอียดอาการ");
-    if (!location) return alert("กรุณากดดึงพิกัดก่อนบันทึก");
-    
+    if (!title || !location) return alert("กรุณากรอกข้อมูลและดึงพิกัดก่อน");
     setLoading(true);
+
     try {
+      let imageUrl = "";
+
+      // 📸 ส่งรูปไปฝากที่ ImgBB
+      if (image) {
+        const formData = new FormData();
+        formData.append("image", image);
+
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          imageUrl = result.data.url; // ได้ลิงก์รูปภาพมาเก็บในฐานข้อมูล
+        }
+      }
+
       const jobNo = await getNextJobNo();
       
+      // 📝 บันทึกข้อมูลทั้งหมดลง Firebase Firestore
       await addDoc(collection(db, "jobs"), {
-        title: title.trim(),
+        title,
         status: "รอซ่อม",
-        jobNo: jobNo,
+        jobNo,
+        imageUrl, 
         createdAt: serverTimestamp(),
-        location: location, // { lat: ..., lng: ... }
+        location,
       });
 
-      alert("บันทึกข้อมูลสำเร็จ! เลขงานของคุณคือ: " + jobNo);
-      setTitle("");
-      setLocation(null);
+      alert("บันทึกสำเร็จ! เลขงาน: " + jobNo);
+      setTitle(""); setLocation(null); setImage(null);
     } catch (e) {
-      console.error("Submit error:", e);
-      alert("เกิดข้อผิดพลาดในการบันทึก: " + e.message);
+      alert("เกิดข้อผิดพลาด: " + e.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto", fontFamily: "sans-serif" }}>
-      <h2 style={{ color: "#0056b3", textAlign: "center" }}>➕ แจ้งซ่อมท่อแตก/ท่อรั่ว</h2>
-      <p style={{ textAlign: "center", color: "#666" }}>กปภ. สาขาท่าเรือ (035-341-814)</p>
+    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
+      <h2 style={{ color: "#0056b3" }}>➕ แจ้งซ่อมพร้อมรูปถ่าย (กปภ.)</h2>
       <hr />
       
       <div style={{ marginTop: "20px" }}>
-        <label style={{ fontWeight: "bold" }}>รายละเอียดอาการ / สถานที่ใกล้เคียง:</label>
+        <label>รายละเอียดอาการ:</label>
         <textarea
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="เช่น พบท่อเมนแตกหน้าบ้านเลขที่... มีน้ำไหลนอง"
-          rows="3"
-          style={{ width: "100%", padding: "12px", marginTop: "8px", borderRadius: "8px", border: "1px solid #ccc", boxSizing: "border-box" }}
+          placeholder="ระบุอาการ เช่น ท่อแตกหน้าบ้าน..."
+          style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
+        />
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>📸 ถ่ายรูปหน้างาน:</label>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment" // เปิดกล้องมือถืออัตโนมัติ
+          onChange={(e) => setImage(e.target.files[0])}
+          style={{ display: "block", marginTop: "10px" }}
         />
       </div>
 
       <div style={{ marginTop: "20px" }}>
         <button
-          type="button"
           onClick={() => {
-            if (!navigator.geolocation) return alert("เบราว์เซอร์ของคุณไม่รองรับการดึงพิกัด");
-            
             navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-              },
-              (err) => {
-                alert("ไม่สามารถดึงพิกัดได้ กรุณาเปิด GPS และอนุญาตให้เข้าถึงตำแหน่ง");
-              },
-              { enableHighAccuracy: true } // ดึงพิกัดแบบแม่นยำสูง
+              (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              () => alert("กรุณาเปิด GPS")
             );
           }}
-          style={{ 
-            width: "100%",
-            padding: "12px", 
-            cursor: "pointer", 
-            backgroundColor: "#3498db", 
-            color: "white", 
-            border: "none", 
-            borderRadius: "8px",
-            fontSize: "15px"
-          }}
+          style={{ padding: "10px", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}
         >
-          📍 {location ? "อัปเดตพิกัดปัจจุบัน" : "กดเพื่อดึงพิกัด GPS"}
+          📍 {location ? "ได้พิกัดแล้ว ✅" : "คลิกเพื่อดึงพิกัดปัจจุบัน"}
         </button>
-        
-        {location && (
-          <div style={{ marginTop: "12px", padding: "10px", backgroundColor: "#e8f5e9", borderRadius: "8px", border: "1px solid #c8e6c9" }}>
-            <span style={{ color: "#2e7d32", fontSize: "14px" }}>
-              ✅ ได้พิกัดแล้ว: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-            </span>
-          </div>
-        )}
       </div>
 
       <button 
@@ -125,4 +116,16 @@ export default function CreateJob() {
           marginTop: "30px", 
           width: "100%", 
           padding: "15px", 
-          backgroundColor: loading ? "#ccc" : "#2ecc71",
+          backgroundColor: loading ? "#ccc" : "#2ecc71", 
+          color: "white", 
+          border: "none", 
+          borderRadius: "8px",
+          fontWeight: "bold",
+          cursor: loading ? "not-allowed" : "pointer"
+        }}
+      >
+        {loading ? "กำลังบันทึกและอัปโหลดรูป..." : "💾 บันทึกแจ้งซ่อม"}
+      </button>
+    </div>
+  );
+}
