@@ -53,7 +53,7 @@ export default function Dashboard() {
 
       {/* รายการงานซ่อม */}
       <div style={{ display: "grid", gap: "15px" }}>
-        {jobs.map(job => (
+        {jobs.map((job, index) => { ... })
           <div key={job.id} style={{ padding: "15px", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", borderLeft: job.status === "รอซ่อม" ? "5px solid #ff4d4d" : "5px solid #28a745" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <strong style={{ fontSize: "18px" }}>{job.jobType}</strong>
