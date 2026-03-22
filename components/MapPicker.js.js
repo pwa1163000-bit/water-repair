@@ -1,8 +1,14 @@
+// components/MapPicker.js
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-const icon = L.icon({ iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png", iconSize: [25, 41], iconAnchor: [12, 41] });
+// แก้ไข Icon หมุด
+const icon = L.icon({ 
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png", 
+  iconSize: [25, 41], 
+  iconAnchor: [12, 41] 
+});
 
 export default function MapPicker({ location, setLocation }) {
   function LocationMarker() {
