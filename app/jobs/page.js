@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// 💡 ตรวจสอบ Path ให้ตรงกับโครงสร้างของคุณ (เช่น ./lib/firebase หรือ ../lib/firebase)
 import { db } from "../lib/firebase"; 
 import { collection, onSnapshot, doc, updateDoc, orderBy, query } from "firebase/firestore";
 
@@ -33,7 +32,22 @@ export default function JobsPage() {
       const ref = doc(db, "jobs", id);
       await updateDoc(ref, { status: newStatus });
     } catch (error) {
-      alert("ไม่สามารถเปลี่ยนสถานะได้: " + error.message);
+      alert("เกิดข้อผิดพลาด: " + error.message);
+    }
+  };
+
+  // ฟังก์ชันแปลงเวลาให้ปลอดภัย (กัน Error)
+  const formatTime = (createdAt) => {
+    if (!createdAt) return "ไม่ระบุเวลา";
+    try {
+      // กรณีเป็น Firebase Timestamp (.toDate())
+      if (createdAt.toDate) return createdAt.toDate().toLocaleString('th-TH');
+      // กรณีเป็นตัวเลขวินาที (.seconds)
+      if (createdAt.seconds) return new Date(createdAt.seconds * 1000).toLocaleString('th-TH');
+      // กรณีเป็น Date หรือ String มาตรฐาน
+      return new Date(createdAt).toLocaleString('th-TH');
+    } catch (e) {
+      return "รูปแบบเวลาผิดพลาด";
     }
   };
 
@@ -42,82 +56,84 @@ export default function JobsPage() {
     : jobs.filter(job => job.status === filter);
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "auto", fontFamily: "sans-serif", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      <h1 style={{ textAlign: "center", color: "#1e293b", marginBottom: "25px" }}>📋 รายการงานซ่อม กปภ.</h1>
+    <div style={{ padding: "15px", maxWidth: "800px", margin: "auto", fontFamily: "sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh" }}>
+      <h2 style={{ textAlign: "center", color: "#1e293b", marginBottom: "20px" }}>📋 จัดการงานซ่อม กปภ. ท่าเรือ</h2>
       
-      {/* ส่วน Tabs กรองสถานะ */}
-      <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "25px", flexWrap: "wrap" }}>
+      {/* ส่วนเลือกหมวดหมู่ */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px", overflowX: "auto", paddingBottom: "5px" }}>
         {["ทั้งหมด", "รอซ่อม", "กำลังซ่อม", "เสร็จแล้ว"].map((st) => (
           <button
             key={st}
             onClick={() => setFilter(st)}
             style={{
-              padding: "10px 18px",
-              borderRadius: "12px",
-              border: filter === st ? "none" : "1px solid #e2e8f0",
-              cursor: "pointer",
-              backgroundColor: filter === st ? "#3b82f6" : "white",
-              color: filter === st ? "white" : "#64748b",
+              padding: "8px 16px",
+              borderRadius: "20px",
+              whiteSpace: "nowrap",
+              border: "none",
+              backgroundColor: filter === st ? "#3b82f6" : "#fff",
+              color: filter === st ? "#fff" : "#64748b",
               fontWeight: "bold",
-              transition: "0.2s",
-              boxShadow: filter === st ? "0 4px 6px rgba(59, 130, 246, 0.3)" : "none"
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              cursor: "pointer"
             }}
           >
-            {st} {st !== "ทั้งหมด" && `(${jobs.filter(j => j.status === st).length})`}
+            {st} ({st === "ทั้งหมด" ? jobs.length : jobs.filter(j => j.status === st).length})
           </button>
         ))}
       </div>
 
-      <div style={{ display: "grid", gap: "20px" }}>
+      <div style={{ display: "grid", gap: "15px" }}>
         {filteredJobs.map((job) => (
           <div key={job.id} style={{
-            backgroundColor: "white",
-            borderRadius: "16px",
-            overflow: "hidden",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-            border: "1px solid #f1f5f9"
+            backgroundColor: "#fff",
+            borderRadius: "15px",
+            padding: "15px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px"
           }}>
-            <div style={{ display: "flex", flexDirection: window.innerWidth < 600 ? "column" : "row" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+              <div>
+                <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "bold" }}>#{job.jobNo || "ไม่มีเลขงาน"}</span>
+                <h3 style={{ margin: "5px 0", color: "#1e293b" }}>{job.title}</h3>
+                <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8" }}>🕒 {formatTime(job.createdAt)}</p>
+              </div>
+              <div style={{ 
+                backgroundColor: statusColors[job.status] || "#94a3b8", 
+                color: "#fff", padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: "bold" 
+              }}>
+                {job.status}
+              </div>
+            </div>
+
+            {/* ส่วนแสดงรูปภาพ */}
+            {job.imageUrl && (
+              <div style={{ width: "100%", borderRadius: "10px", overflow: "hidden" }}>
+                <img src={job.imageUrl} alt="Job" style={{ width: "100%", height: "200px", objectFit: "cover" }} />
+              </div>
+            )}
+
+            <hr style={{ border: "none", borderTop: "1px solid #f1f5f9", margin: "5px 0" }} />
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button onClick={() => updateStatus(job.id, "รอซ่อม")} style={actionBtn("#ef4444")}>รอซ่อม</button>
+              <button onClick={() => updateStatus(job.id, "กำลังซ่อม")} style={actionBtn("#f59e0b")}>กำลังซ่อม</button>
+              <button onClick={() => updateStatus(job.id, "เสร็จแล้ว")} style={actionBtn("#10b981")}>เสร็จแล้ว</button>
               
-              {/* 📸 ส่วนแสดงรูปภาพ (ถ้ามี) */}
-              <div style={{ width: window.innerWidth < 600 ? "100%" : "200px", height: "180px", backgroundColor: "#f1f5f9", flexShrink: 0 }}>
-                {job.imageUrl ? (
-                  <img src={job.imageUrl} alt="Job" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: "12px" }}>
-                    ไม่มีรูปภาพหน้างาน
-                  </div>
-                )}
-              </div>
-
-              {/* 📝 ส่วนรายละเอียดงาน */}
-              <div style={{ padding: "20px", flexGrow: 1, position: "relative" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "bold", color: "#3b82f6" }}>#{job.jobNo || "NEW"}</span>
-                  <span style={{
-                    backgroundColor: statusColors[job.status] || "#94a3b8",
-                    color: "white", padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "bold"
-                  }}>{job.status}</span>
-                </div>
-                
-                <h3 style={{ margin: "0 0 8px 0", color: "#1e293b", fontSize: "18px" }}>{job.title}</h3>
-                <p style={{ margin: "0", color: "#64748b", fontSize: "13px" }}>
-                  🕒 {job.createdAt?.toDate ? job.createdAt.toDate().toLocaleString('th-TH') : "ไม่ระบุเวลา"}
-                </p>
-
-                <div style={{ marginTop: "20px", display: "flex", gap: "8px", alignItems: "center" }}>
-                  <button onClick={() => updateStatus(job.id, "รอซ่อม")} style={btnActionStyle("#ef4444")}>รอซ่อม</button>
-                  <button onClick={() => updateStatus(job.id, "กำลังซ่อม")} style={btnActionStyle("#f59e0b")}>กำลังซ่อม</button>
-                  <button onClick={() => updateStatus(job.id, "เสร็จแล้ว")} style={btnActionStyle("#10b981")}>เสร็จแล้ว</button>
-                  
-                  {job.location?.lat && (
-                    <a href={`https://www.google.com/maps?q=${job.location.lat},${job.location.lng}`} target="_blank" rel="noreferrer"
-                       style={{ marginLeft: "auto", padding: "8px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#3b82f6", textDecoration: "none", fontSize: "14px" }}>
-                       📍 นำทาง
-                    </a>
-                  )}
-                </div>
-              </div>
+              {job.location?.lat && (
+                <a 
+                  href={`https://www.google.com/maps?q=${job.location.lat},${job.location.lng}`} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ 
+                    flex: "1", textAlign: "center", padding: "10px", borderRadius: "8px", 
+                    backgroundColor: "#4285F4", color: "#fff", textDecoration: "none", fontSize: "13px", fontWeight: "bold"
+                  }}
+                >
+                  📍 แผนที่
+                </a>
+              )}
             </div>
           </div>
         ))}
@@ -126,13 +142,14 @@ export default function JobsPage() {
   );
 }
 
-const btnActionStyle = (color) => ({
-  flex: 1,
-  padding: "8px 5px",
+const actionBtn = (color) => ({
+  flex: "1",
+  padding: "10px 5px",
   borderRadius: "8px",
   border: `1.5px solid ${color}`,
-  backgroundColor: "transparent",
+  backgroundColor: "#fff",
   color: color,
-  cursor: "pointer",
-  fontSize: "12px",
-  fontWeight: "
+  fontWeight: "bold",
+  fontSize: "13px",
+  cursor: "pointer"
+});
