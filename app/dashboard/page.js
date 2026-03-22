@@ -2,11 +2,18 @@
 import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-
+import { doc, updateDoc } from "firebase/firestore";
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0 });
-
+  const handleFinishJob = async (id) => {
+  if (confirm("ยืนยันว่าซ่อมเสร็จแล้วใช่ไหม?")) {
+    const jobRef = doc(db, "jobs", id);
+    await updateDoc(jobRef, {
+      status: "ซ่อมเสร็จแล้ว"
+    });
+  }
+};
   useEffect(() => {
     // ดึงข้อมูลเรียงตามเวลาที่สร้าง (จากเก่าไปใหม่ เพื่อให้เลขรันลำดับไม่สลับกัน)
     const q = query(collection(db, "jobs"), orderBy("createdAt", "asc"));
