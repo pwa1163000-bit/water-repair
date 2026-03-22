@@ -1,79 +1,27 @@
 "use client";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-import { useEffect, useState } from "react";
-import { db } from "../../lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
-import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer, InfoWindow } from "@react-google-maps/api";
+// ต้องแก้ Bug ไอคอนไม่ขึ้นใน Leaflet + Next.js เล็กน้อย
+const customIcon = new L.Icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
-const containerStyle = { width: "100%", height: "90vh" };
-// พิกัดเริ่มต้น (ตัวอย่าง: พื้นที่อำเภอท่าเรือ)
-const center = { lat: 14.5655, lng: 100.7196 }; 
+export default function LeafletMap() {
+  const position = [14.5655, 100.7196]; // พิกัดท่าเรือ
 
-export default function MapPage() {
-  const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
-
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY", // ⚠️ ต้องนำ Key จาก Google Cloud มาใส่ที่นี่
-  });
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setJobs(data);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const getIcon = (status) => {
-    if (status === "รอซ่อม") return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-    if (status === "กำลังซ่อม") return "http://maps.google.com/mapfiles/ms/icons/orange-dot.png";
-    if (status === "เสร็จแล้ว") return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-    return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-  };
-
-  return isLoaded ? (
-    <div style={{ padding: "10px" }}>
-      <h2 style={{ marginBottom: "10px" }}>🗺️ แผนที่จุดแจ้งซ่อม (Clustering)</h2>
-      
-      <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
-        <MarkerClusterer>
-          {(clusterer) =>
-            jobs.map((job) => (
-              job.location && (
-                <Marker
-                  key={job.id}
-                  position={{ lat: job.location.lat, lng: job.location.lng }}
-                  clusterer={clusterer}
-                  icon={getIcon(job.status)}
-                  onClick={() => setSelectedJob(job)}
-                />
-              )
-            ))
-          }
-        </MarkerClusterer>
-
-        {selectedJob && (
-          <InfoWindow
-            position={{ lat: selectedJob.location.lat, lng: selectedJob.location.lng }}
-            onCloseClick={() => setSelectedJob(null)}
-          >
-            <div style={{ color: "#000", padding: "5px" }}>
-              <h4 style={{ margin: "0 0 5px 0" }}>งานเลขที่: {selectedJob.jobNo}</h4>
-              <p style={{ margin: "0" }}><b>อาการ:</b> {selectedJob.title}</p>
-              <p style={{ margin: "5px 0" }}><b>สถานะ:</b> {selectedJob.status}</p>
-              <a 
-                href={`https://www.google.com/maps?q=${selectedJob.location.lat},${selectedJob.location.lng}`} 
-                target="_blank"
-                style={{ color: "blue", textDecoration: "underline" }}
-              >
-                เปิดใน Google Maps
-              </a>
-            </div>
-          </InfoWindow>
-        )}
-      </GoogleMap>
-    </div>
-  ) : <p>กำลังโหลดแผนที่...</p>;
+  return (
+    <MapContainer center={position} zoom={13} style={{ height: "500px", width: "100%" }}>
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; OpenStreetMap contributors'
+      />
+      <Marker position={position} icon={customIcon}>
+        <Popup>จุดแจ้งซ่อม กปภ. สาขาท่าเรือ</Popup>
+      </Marker>
+    </MapContainer>
+  );
 }
