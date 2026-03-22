@@ -40,5 +40,6 @@ export default function MapPicker({ location, setLocation }) {
       {/* เรียกใช้งานการปักหมุดเมื่อคลิก */}
       <LocationMarker location={location} setLocation={setLocation} />
     </MapContainer>
+<MapPicker location={location} setLocation={setLocation} />
   );
 }
