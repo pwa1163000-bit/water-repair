@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// ✅ แก้ไข Path ตรงนี้: เปลี่ยนจาก ../../ เป็น ../ เพราะเราย้ายโฟลเดอร์เข้ามาใน app แล้ว
-const MapPicker = dynamic(() => import("../components/MapPicker"), { 
+// โหลด MapPicker (เช็ค Path ให้ดีนะครับ ถ้าไฟล์อยู่ในโฟลเดอร์เดียวกันใช้ "./MapPicker")
+const MapPicker = dynamic(() => import("./MapPicker"), { 
   ssr: false,
   loading: () => <div style={{ height: "300px", background: "#eee", textAlign: "center", paddingTop: "140px" }}>กำลังโหลดแผนที่...</div>
 });
@@ -40,14 +40,38 @@ export default function CreateJob() {
 
   const handleSubmit = async () => {
     if (!location.lat || !imageUrl) { alert("กรุณาระบุพิกัดและถ่ายรูปครับ"); return; }
+    
     try {
       setUploading(true);
+
+      // --- ส่วนที่เพิ่มใหม่: ระบบรันเลขงานอัตโนมัติ ---
+      const jobQuery = query(collection(db, "jobs"));
+      const querySnapshot = await getDocs(jobQuery);
+      const totalJobs = querySnapshot.size; // นับจำนวนงานที่มีอยู่แล้ว
+      
+      const runNumber = (totalJobs + 1).toString().padStart(3, '0'); // เช่น 001, 002
+      const year = "69";
+      const jobNo = `${runNumber}/${year}`; 
+      // ---------------------------------------
+
       await addDoc(collection(db, "jobs"), { 
-        jobType, description, location, imageUrl, status: "รอซ่อม", createdAt: serverTimestamp() 
+        jobNo, // บันทึกเลขงานลง Firebase เลย
+        jobType, 
+        description, 
+        location, 
+        imageUrl, 
+        status: "รอซ่อม", 
+        createdAt: serverTimestamp() 
       });
-      alert("ส่งงานสำเร็จ!");
+
+      alert(`ส่งงานสำเร็จ! เลขงานของคุณคือ ${jobNo}`);
       router.push("/dashboard"); 
-    } finally { setUploading(false); }
+    } catch (error) {
+      console.error(error);
+      alert("เกิดข้อผิดพลาดในการส่งงาน");
+    } finally { 
+      setUploading(false); 
+    }
   };
 
   return (
