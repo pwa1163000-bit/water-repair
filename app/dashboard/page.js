@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// ✅ ใช้การเรียกแบบระบุตำแหน่งที่ชัดเจน
-import { db } from "./lib/firebase"; 
+// ✅ แก้ไข Path: เนื่องจากไฟล์นี้อยู่ใน app/dashboard/ จึงต้องถอยออก 1 ชั้น (..) 
+// เพื่อไปหาโฟลเดอร์ lib ที่อยู่ภายใต้ app/
+import { db } from "../lib/firebase"; 
 import { collection, onSnapshot } from "firebase/firestore";
 
 export default function Dashboard() {
@@ -11,6 +12,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!db) return;
+
     const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -19,51 +21,74 @@ export default function Dashboard() {
       setJobs(data);
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
+  // 🧮 คำนวณสถิติ
   const total = jobs.length;
   const pending = jobs.filter(j => ["รอซ่อม", "ท่อแตก", "ท่อรั่ว"].includes(j.status?.trim())).length;
   const working = jobs.filter(j => j.status?.trim() === "กำลังซ่อม").length;
   const done = jobs.filter(j => ["เสร็จแล้ว", "ซ่อมแล้ว"].includes(j.status?.trim())).length;
 
-  if (loading) return <div style={{ padding: 50, textAlign: "center" }}>⌛ กำลังอัปเดตข้อมูล...</div>;
+  if (loading) return <div style={{ padding: 50, textAlign: "center", fontFamily: "sans-serif", color: "#64748b" }}>⏳ กำลังโหลดข้อมูล...</div>;
 
   return (
-    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto", fontFamily: "sans-serif" }}>
-      <header style={{ marginBottom: "30px" }}>
-        <h1 style={{ color: "#1e293b", margin: 0, fontSize: "24px" }}>📊 แดชบอร์ด กปภ. สาขาท่าเรือ</h1>
+    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto", fontFamily: "sans-serif", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      
+      <header style={{ marginBottom: "30px", textAlign: "center" }}>
+        <h1 style={{ color: "#1e293b", margin: 0, fontSize: "26px", fontWeight: "800" }}>📊 ระบบสรุปงาน กปภ. ท่าเรือ</h1>
+        <p style={{ color: "#3b82f6", fontSize: "14px", fontWeight: "bold" }}>สาขาท่าเรือ (035-341-814)</p>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "15px" }}>
-        <StatBox title="ทั้งหมด" value={total} color="#475569" />
-        <StatBox title="รอซ่อม" value={pending} color="#ef4444" />
-        <StatBox title="กำลังซ่อม" value={working} color="#f59e0b" />
-        <StatBox title="เสร็จแล้ว" value={done} color="#10b981" />
+      {/* สถิติหลัก */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "15px", marginBottom: "30px" }}>
+        <StatBox title="งานทั้งหมด" value={total} color="#475569" icon="📋" />
+        <StatBox title="รอซ่อม" value={pending} color="#ef4444" icon="📍" />
+        <StatBox title="กำลังซ่อม" value={working} color="#f59e0b" icon="🔧" />
+        <StatBox title="เสร็จแล้ว" value={done} color="#10b981" icon="✅" />
       </div>
 
-      <div style={{ marginTop: "30px", display: "flex", gap: "10px" }}>
-        <a href="/create" style={{ padding: "15px", backgroundColor: "#3b82f6", color: "#fff", borderRadius: "10px", textDecoration: "none", fontWeight: "bold" }}>➕ แจ้งซ่อมใหม่</a>
-        <a href="/jobs" style={{ padding: "15px", backgroundColor: "#1e293b", color: "#fff", borderRadius: "10px", textDecoration: "none", fontWeight: "bold" }}>📝 รายการงาน</a>
+      {/* ปุ่มเมนูทางลัด */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", maxWidth: "500px", margin: "0 auto" }}>
+        <a href="/create" style={navButtonStyle("#3b82f6")}>➕ แจ้งซ่อมใหม่</a>
+        <a href="/jobs" style={navButtonStyle("#1e293b")}>📝 รายการงาน</a>
       </div>
+
+      <footer style={{ marginTop: "40px", textAlign: "center", color: "#94a3b8", fontSize: "12px" }}>
+        อัปเดตล่าสุด: {new Date().toLocaleTimeString('th-TH')} น.
+      </footer>
     </div>
   );
 }
 
-// ✅ แก้ไข Syntax Error ตรงส่วน border ที่ค้างอยู่
-function StatBox({ title, value, color, highlight }) {
+// Component สำหรับกล่องสถิติ
+function StatBox({ title, value, color, icon }) {
   return (
     <div style={{
-      background: highlight ? `linear-gradient(135deg, ${color}, #1d4ed8)` : "white",
-      color: highlight ? "white" : "#1e293b",
-      padding: "25px 15px",
+      backgroundColor: "white",
+      padding: "20px 10px",
       borderRadius: "20px",
       textAlign: "center",
-      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)",
-      border: highlight ? "none" : "1px solid #e2e8f0" // ปิด string ให้ถูกต้องแล้ว
+      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+      borderTop: `5px solid ${color}`
     }}>
-      <div style={{ fontSize: "14px", opacity: 0.8, marginBottom: "10px" }}>{title}</div>
-      <div style={{ fontSize: "36px", fontWeight: "bold" }}>{value}</div>
+      <div style={{ fontSize: "20px", marginBottom: "5px" }}>{icon}</div>
+      <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "bold" }}>{title}</div>
+      <div style={{ fontSize: "32px", fontWeight: "800", color: "#1e293b" }}>{value}</div>
     </div>
   );
 }
+
+const navButtonStyle = (bgColor) => ({
+  display: "block",
+  padding: "16px",
+  backgroundColor: bgColor,
+  color: "white",
+  textAlign: "center",
+  textDecoration: "none",
+  borderRadius: "12px",
+  fontWeight: "bold",
+  fontSize: "15px",
+  boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+});
