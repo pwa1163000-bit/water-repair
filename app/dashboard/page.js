@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// 💡 ตรวจสอบ Path ตรงนี้ให้ตรงกับโครงสร้างของคุณ (ใช้ ./lib/firebase ตามที่คุยกันรอบก่อน)
+// ✅ ใช้การเรียกแบบระบุตำแหน่งที่ชัดเจน
 import { db } from "./lib/firebase"; 
 import { collection, onSnapshot } from "firebase/firestore";
 
@@ -11,7 +11,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!db) return;
-
     const unsubscribe = onSnapshot(collection(db, "jobs"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -20,77 +19,51 @@ export default function Dashboard() {
       setJobs(data);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // 🧮 ฟังก์ชันคำนวณสถิติ
   const total = jobs.length;
-  // ใช้ .trim() เพื่อป้องกันปัญหาช่องว่างในข้อความสถานะ
-  const pending = jobs.filter(j => j.status?.trim() === "รอซ่อม" || j.status?.trim() === "ท่อแตก").length;
+  const pending = jobs.filter(j => ["รอซ่อม", "ท่อแตก", "ท่อรั่ว"].includes(j.status?.trim())).length;
   const working = jobs.filter(j => j.status?.trim() === "กำลังซ่อม").length;
-  const done = jobs.filter(j => j.status?.trim() === "เสร็จแล้ว" || j.status?.trim() === "ซ่อมแล้ว").length;
+  const done = jobs.filter(j => ["เสร็จแล้ว", "ซ่อมแล้ว"].includes(j.status?.trim())).length;
 
-  // 📅 คำนวณงานวันนี้ (เช็คทั้ง seconds จาก Firebase และ Date มาตรฐาน)
-  const todayStr = new Date().toDateString();
-  const todayJobs = jobs.filter(j => {
-    if (!j.createdAt) return false;
-    
-    // แปลงจาก Firebase Timestamp เป็น JavaScript Date
-    const jobDate = j.createdAt.seconds 
-      ? new Date(j.createdAt.seconds * 1000) 
-      : new Date(j.createdAt); // เผื่อกรณีเก็บเป็น String หรือ Date ธรรมดา
-      
-    return jobDate.toDateString() === todayStr;
-  }).length;
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳ กำลังโหลดข้อมูล...</div>;
-
-// ... (โค้ดส่วนบนเหมือนเดิมจนถึงส่วน return) ...
+  if (loading) return <div style={{ padding: 50, textAlign: "center" }}>⌛ กำลังอัปเดตข้อมูล...</div>;
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto", fontFamily: "sans-serif", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      <header style={{ marginBottom: "30px", textAlign: "center" }}>
-        <h1 style={{ color: "#1e293b", margin: 0, fontSize: "24px" }}>📊 ระบบสรุปงาน กปภ. ท่าเรือ</h1>
-        <p style={{ color: "#64748b", fontSize: "14px", marginTop: "5px" }}>อัปเดตสถานะงานซ่อมท่อและบริการผู้ใช้น้ำ</p>
+    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto", fontFamily: "sans-serif" }}>
+      <header style={{ marginBottom: "30px" }}>
+        <h1 style={{ color: "#1e293b", margin: 0, fontSize: "24px" }}>📊 แดชบอร์ด กปภ. สาขาท่าเรือ</h1>
       </header>
 
-      {/* สถิติหลัก */}
-      <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", justifyContent: "center", marginBottom: "30px" }}>
-        <Box title="งานทั้งหมด" value={total} color="#475569" icon="📋" />
-        <Box title="รอซ่อม" value={pending} color="#ef4444" icon="🔴" />
-        <Box title="กำลังซ่อม" value={working} color="#f59e0b" icon="🟠" />
-        <Box title="เสร็จแล้ว" value={done} color="#10b981" icon="✅" />
-        <Box title="งานวันนี้" value={todayJobs} color="#3b82f6" icon="📅" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "15px" }}>
+        <StatBox title="ทั้งหมด" value={total} color="#475569" />
+        <StatBox title="รอซ่อม" value={pending} color="#ef4444" />
+        <StatBox title="กำลังซ่อม" value={working} color="#f59e0b" />
+        <StatBox title="เสร็จแล้ว" value={done} color="#10b981" />
       </div>
 
-      {/* 🚀 เพิ่มเมนูทางลัด (Shortcuts) */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxWidth: "500px", margin: "0 auto" }}>
-        <a href="/create" style={navButtonStyle("#3b82f6")}>➕ แจ้งซ่อมใหม่</a>
-        <a href="/jobs" style={navButtonStyle("#1e293b")}>📝 จัดการงานซ่อม</a>
-      </div>
-
-      <div style={{ marginTop: "40px", textAlign: "center" }}>
-        <p style={{ color: "#94a3b8", fontSize: "12px" }}>
-          อัปเดตข้อมูลล่าสุด: {new Date().toLocaleTimeString('th-TH')} น.
-        </p>
+      <div style={{ marginTop: "30px", display: "flex", gap: "10px" }}>
+        <a href="/create" style={{ padding: "15px", backgroundColor: "#3b82f6", color: "#fff", borderRadius: "10px", textDecoration: "none", fontWeight: "bold" }}>➕ แจ้งซ่อมใหม่</a>
+        <a href="/jobs" style={{ padding: "15px", backgroundColor: "#1e293b", color: "#fff", borderRadius: "10px", textDecoration: "none", fontWeight: "bold" }}>📝 รายการงาน</a>
       </div>
     </div>
   );
 }
 
-// สไตล์ปุ่มเมนูทางลัด
-const navButtonStyle = (bgColor) => ({
-  display: "block",
-  padding: "15px",
-  backgroundColor: bgColor,
-  color: "white",
-  textAlign: "center",
-  textDecoration: "none",
-  borderRadius: "12px",
-  fontWeight: "bold",
-  fontSize: "14px",
-  boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-});
-
-// ... (Component Box ด้านล่างคงเดิม) ...
+// ✅ แก้ไข Syntax Error ตรงส่วน border ที่ค้างอยู่
+function StatBox({ title, value, color, highlight }) {
+  return (
+    <div style={{
+      background: highlight ? `linear-gradient(135deg, ${color}, #1d4ed8)` : "white",
+      color: highlight ? "white" : "#1e293b",
+      padding: "25px 15px",
+      borderRadius: "20px",
+      textAlign: "center",
+      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)",
+      border: highlight ? "none" : "1px solid #e2e8f0" // ปิด string ให้ถูกต้องแล้ว
+    }}>
+      <div style={{ fontSize: "14px", opacity: 0.8, marginBottom: "10px" }}>{title}</div>
+      <div style={{ fontSize: "36px", fontWeight: "bold" }}>{value}</div>
+    </div>
+  );
+}
