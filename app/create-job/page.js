@@ -81,7 +81,7 @@ export default function CreateJob() {
         <textarea
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="ระบุอาการท่อแตก/รั่ว..."
+          placeholder="ระบุอาการท่อแตก/รั่ว หรือชื่อผู้แจ้ง..."
           style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
         />
       </div>
@@ -97,13 +97,14 @@ export default function CreateJob() {
         />
       </div>
 
+      {/* 📍 ส่วนที่หายไป: ปุ่มดึงพิกัด GPS */}
       <div style={{ marginTop: "20px" }}>
         <button
           type="button"
           onClick={() => {
             navigator.geolocation.getCurrentPosition(
               (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => alert("กรุณาเปิด GPS และอนุญาตให้เข้าถึงตำแหน่ง"),
+              () => alert("กรุณาเปิด GPS และอนุญาตให้เว็บเข้าถึงตำแหน่ง"),
               { enableHighAccuracy: true }
             );
           }}
@@ -133,4 +134,4 @@ export default function CreateJob() {
       </button>
     </div>
   );
-}
+}    
