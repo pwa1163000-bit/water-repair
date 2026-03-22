@@ -10,9 +10,10 @@ export default function CreateJob() {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🔑 นำรหัสจากหน้า https://api.imgbb.com/ มาวางตรงนี้ครับ
-  const IMGBB_API_KEY = "64e2261d33f516b0a748c0d7fb105e2e; 
+  // 🔑 เติม API Key ที่ถูกต้องให้แล้วครับ
+  const IMGBB_API_KEY = "64e2261d33f516b0a748c0d7fb105e2e"; 
 
+  // 🔢 ฟังก์ชันรันเลขที่งานอัตโนมัติ (เช่น 001/69)
   const getNextJobNo = async () => {
     const counterRef = doc(db, "counters", "jobs");
     return await runTransaction(db, async (transaction) => {
@@ -42,10 +43,14 @@ export default function CreateJob() {
         const result = await response.json();
         if (result.success) {
           imageUrl = result.data.url; 
+        } else {
+          throw new Error("อัปโหลดรูปภาพไม่สำเร็จ");
         }
       }
 
       const jobNo = await getNextJobNo();
+      
+      // บันทึกข้อมูลลง Firestore
       await addDoc(collection(db, "jobs"), {
         title: title.trim(),
         status: "รอซ่อม",
@@ -56,7 +61,9 @@ export default function CreateJob() {
       });
 
       alert("บันทึกสำเร็จ! เลขงาน: " + jobNo);
-      setTitle(""); setLocation(null); setImage(null);
+      setTitle(""); 
+      setLocation(null); 
+      setImage(null);
     } catch (e) {
       alert("เกิดข้อผิดพลาด: " + e.message);
     } finally {
@@ -65,9 +72,10 @@ export default function CreateJob() {
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
-      <h2>➕ แจ้งซ่อม (กปภ. ท่าเรือ)</h2>
+    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto", fontFamily: "sans-serif" }}>
+      <h2 style={{ color: "#0056b3", textAlign: "center" }}>➕ แจ้งซ่อม (กปภ. ท่าเรือ)</h2>
       <hr />
+      
       <div style={{ marginTop: "20px" }}>
         <label>รายละเอียดอาการ:</label>
         <textarea
@@ -77,31 +85,52 @@ export default function CreateJob() {
           style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}
         />
       </div>
+
       <div style={{ marginTop: "20px" }}>
         <label>📸 ถ่ายรูปหน้างาน:</label>
-        <input type="file" accept="image/*" capture="environment" onChange={(e) => setImage(e.target.files[0])} style={{ display: "block", marginTop: "10px" }} />
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          onChange={(e) => setImage(e.target.files[0])} 
+          style={{ display: "block", marginTop: "10px" }} 
+        />
       </div>
+
       <div style={{ marginTop: "20px" }}>
         <button
+          type="button"
           onClick={() => {
             navigator.geolocation.getCurrentPosition(
               (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => alert("กรุณาเปิด GPS"),
+              () => alert("กรุณาเปิด GPS และอนุญาตให้เข้าถึงตำแหน่ง"),
               { enableHighAccuracy: true }
             );
           }}
-          style={{ padding: "10px", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}
+          style={{ padding: "10px", backgroundColor: "#3498db", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", width: "100%" }}
         >
           📍 {location ? "ได้พิกัดแล้ว ✅" : "คลิกเพื่อดึงพิกัดปัจจุบัน"}
         </button>
       </div>
+
       <button 
         onClick={handleSubmit} 
         disabled={loading}
-        style={{ marginTop: "30px", width: "100%", padding: "15px", backgroundColor: loading ? "#ccc" : "#2ecc71", color: "white", border: "none", borderRadius: "8px", fontWeight: "bold" }}
+        style={{ 
+          marginTop: "30px", 
+          width: "100%", 
+          padding: "15px", 
+          backgroundColor: loading ? "#ccc" : "#2ecc71", 
+          color: "white", 
+          border: "none", 
+          borderRadius: "8px", 
+          fontWeight: "bold",
+          fontSize: "16px",
+          cursor: loading ? "not-allowed" : "pointer"
+        }}
       >
-        {loading ? "กำลังบันทึก..." : "💾 บันทึกแจ้งซ่อม"}
+        {loading ? "กำลังบันทึกและอัปโหลดรูป..." : "💾 บันทึกแจ้งซ่อม"}
       </button>
     </div>
   );
-} // ปิดฟังก์ชัน CreateJob ให้ครบถ้วน
+}
