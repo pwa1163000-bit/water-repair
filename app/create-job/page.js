@@ -1,32 +1,40 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+// นำเข้า Leaflet (แผนที่ฟรี)
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// แก้ไข Icon หมุดให้แสดงผลถูกต้อง
+const icon = L.icon({ iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png", iconSize: [25, 41], iconAnchor: [12, 41] });
 
 export default function CreateJob() {
   const router = useRouter();
-  const [location, setLocation] = useState({ lat: "", lng: "" });
+  const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 }); // ค่าเริ่มต้นแถวท่าเรือ
   const [description, setDescription] = useState("");
   const [jobType, setJobType] = useState("ท่อแตกรั่ว");
   const [isUrgent, setIsUrgent] = useState(false);
-  
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // ส่วนประกอบสำหรับ "คลิกแล้วหมุดย้ายตาม"
+  function LocationMarker() {
+    useMapEvents({
+      click(e) {
+        setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+      },
+    });
+    return location.lat ? <Marker position={[location.lat, location.lng]} icon={icon} /> : null;
+  }
 
   const getMyLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        alert("ปักหมุดสำเร็จ!");
-      }, (error) => {
-        alert("กรุณาเปิด GPS บนมือถือของท่าน");
+        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
       });
-    } else {
-      alert("มือถือของคุณไม่รองรับการดึงพิกัด");
     }
   };
 
@@ -38,86 +46,62 @@ export default function CreateJob() {
     formData.append("image", file);
     const apiKey = "64e2261d33f516b0a748c0d7fb105e2e"; 
     try {
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
       const data = await res.json();
-      if (data.success) {
-        setImageUrl(data.data.url);
-        alert("อัปโหลดรูปภาพเรียบร้อย!");
-      }
-    } catch (err) {
-      alert("เกิดข้อผิดพลาดในการโหลดรูป");
-    } finally {
-      setUploading(false);
-    }
+      if (data.success) setImageUrl(data.data.url);
+    } finally { setUploading(false); }
   };
 
   const handleSubmit = async () => {
-    if (!location.lat || !imageUrl) {
-      alert("กรุณาปักพิกัดและถ่ายรูปก่อนส่งงานครับ");
-      return;
-    }
+    if (!location.lat || !imageUrl) { alert("กรุณาระบุพิกัดและถ่ายรูปครับ"); return; }
     try {
       setUploading(true);
-      await addDoc(collection(db, "jobs"), {
-        jobType,
-        description,
-        location,
-        imageUrl,
-        isUrgent,
-        status: "รอซ่อม",
-        createdAt: serverTimestamp(),
-      });
-      alert("ส่งงานเข้าสู่ระบบสำเร็จ!");
+      await addDoc(collection(db, "jobs"), { jobType, description, location, imageUrl, isUrgent, status: "รอซ่อม", createdAt: serverTimestamp() });
+      alert("ส่งงานสำเร็จ!");
       router.push("/dashboard"); 
-    } catch (error) {
-      console.error(error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "500px", margin: "auto", fontFamily: "sans-serif" }}>
-      <h2 style={{ textAlign: "center", color: "#0056b3" }}>📋 เปิดงานซ่อมท่อใหม่</h2>
+    <div style={{ padding: "15px", maxWidth: "600px", margin: "auto", fontFamily: "sans-serif" }}>
+      <h2 style={{ textAlign: "center", color: "#0056b3" }}>📋 เปิดงานซ่อม (กปภ.ท่าเรือ)</h2>
       <hr />
+
+      {/* แผนที่สำหรับจิ้มเลือกจุด */}
       <div style={{ marginBottom: "15px" }}>
-        <label>ลักษณะที่แตก/ชำรุด:</label>
-        <select value={jobType} onChange={(e) => setJobType(e.target.value)}
-          style={{ width: "100%", padding: "12px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc" }}>
+        <label style={{ fontWeight: "bold" }}>📍 เลือกจุดที่ท่อแตกบนแผนที่ (จิ้มเพื่อย้ายหมุด):</label>
+        <div style={{ height: "300px", width: "100%", marginTop: "10px", borderRadius: "10px", overflow: "hidden", border: "2px solid #007bff" }}>
+          <MapContainer center={[14.5826, 100.6441]} zoom={13} style={{ height: "100%", width: "100%" }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <LocationMarker />
+          </MapContainer>
+        </div>
+        <button onClick={getMyLocation} style={{ width: "100%", padding: "10px", marginTop: "10px", backgroundColor: "#f8f9fa", border: "1px solid #ccc", borderRadius: "5px" }}>
+          🎯 ใช้พิกัดปัจจุบันของฉัน
+        </button>
+      </div>
+
+      <div style={{ marginBottom: "15px" }}>
+        <label>ลักษณะที่แตก:</label>
+        <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={{ width: "100%", padding: "12px", marginTop: "5px" }}>
           <option>ท่อแตกรั่ว</option>
-          <option>น้ำไหลอ่อน/ไม่ไหล</option>
+          <option>น้ำไม่ไหล</option>
           <option>ประตูน้ำชำรุด</option>
-          <option>มาตรวัดน้ำชำรุด</option>
         </select>
       </div>
+
       <div style={{ marginBottom: "15px" }}>
-        <label>ที่อยู่ / จุดสังเกตคราวๆ:</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-          placeholder="เช่น หน้าบ้านเลขที่... หรือ ใกล้โรงเรียน..." 
-          style={{ width: "100%", padding: "10px", marginTop: "5px", borderRadius: "8px", border: "1px solid #ccc", height: "80px" }} />
+        <label>จุดสังเกต/ที่อยู่:</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: "100%", padding: "10px", height: "60px" }} />
       </div>
-      <div style={{ marginBottom: "15px", border: "2px dashed #007bff", padding: "15px", borderRadius: "10px", textAlign: "center", backgroundColor: "#f8f9fa" }}>
-        <label style={{ fontWeight: "bold", display: "block", marginBottom: "10px" }}>📷 ถ่ายรูปสภาพหน้างาน:</label>
-        <input type="file" accept="image/*" capture="environment" onChange={handleUploadImage} style={{ marginBottom: "10px" }} />
-        {uploading && <p style={{ color: "orange" }}>กำลังดำเนินการ...</p>}
-        {imageUrl && <img src={imageUrl} alt="preview" style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }} />}
+
+      <div style={{ marginBottom: "15px", border: "2px dashed #ccc", padding: "10px", textAlign: "center" }}>
+        <input type="file" accept="image/*" capture="environment" onChange={handleUploadImage} />
+        {imageUrl && <img src={imageUrl} alt="preview" style={{ width: "100%", marginTop: "10px" }} />}
       </div>
-      <button onClick={getMyLocation} 
-        style={{ width: "100%", padding: "12px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "8px", marginBottom: "10px", fontWeight: "bold" }}>
-        📍 ปักพิกัดตำแหน่งปัจจุบัน
-      </button>
-      <p style={{ fontSize: "14px", color: "#666" }}>พิกัด: {location.lat || "-"}, {location.lng || "-"}</p>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", backgroundColor: "#fff3f3", padding: "10px", borderRadius: "8px" }}>
-        <input type="checkbox" id="urgent" checked={isUrgent} onChange={(e) => setIsUrgent(e.target.checked)} style={{ transform: "scale(1.5)" }} />
-        <label htmlFor="urgent" style={{ color: "red", fontWeight: "bold" }}>⚠️ งานด่วน (ต้องรีบเข้าซ่อมทันที)</label>
-      </div>
-      <button onClick={handleSubmit} disabled={uploading}
-        style={{ width: "100%", padding: "18px", backgroundColor: uploading ? "#ccc" : "#28a745", color: "white", border: "none", borderRadius: "8px", marginTop: "20px", fontSize: "20px", fontWeight: "bold", cursor: "pointer" }}>
-        {uploading ? "กำลังส่งข้อมูล..." : "ส่งข้อมูลเปิดงานให้ทีมซ่อม"}
+
+      <button onClick={handleSubmit} disabled={uploading} style={{ width: "100%", padding: "15px", backgroundColor: "#28a745", color: "white", fontSize: "18px", borderRadius: "8px", border: "none" }}>
+        {uploading ? "กำลังส่ง..." : "ยืนยันการเปิดงาน"}
       </button>
     </div>
   );
