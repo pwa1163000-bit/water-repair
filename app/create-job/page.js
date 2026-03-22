@@ -35,6 +35,9 @@ export default function CreateJob() {
       const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) setImageUrl(data.data.url);
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("อัปโหลดรูปไม่สำเร็จ");
     } finally { setUploading(false); }
   };
 
@@ -44,11 +47,10 @@ export default function CreateJob() {
     try {
       setUploading(true);
 
-      // --- ส่วนที่เพิ่มใหม่: ระบบรันเลขงานอัตโนมัติ ---
-      const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 });
+      // --- ✅ ส่วนที่แก้ไข: ระบบรันเลขงานอัตโนมัติ ---
       const jobQuery = query(collection(db, "jobs"));
       const querySnapshot = await getDocs(jobQuery);
-      const totalJobs = querySnapshot.size; // นับจำนวนงานที่มีอยู่แล้ว
+      const totalJobs = querySnapshot.size; // นับจำนวนงานที่มีอยู่แล้วในระบบ
       
       const runNumber = (totalJobs + 1).toString().padStart(3, '0'); // เช่น 001, 002
       const year = "69";
@@ -56,10 +58,10 @@ export default function CreateJob() {
       // ---------------------------------------
 
       await addDoc(collection(db, "jobs"), { 
-        jobNo, // บันทึกเลขงานลง Firebase เลย
+        jobNo, // บันทึกเลขงานลง Firebase
         jobType, 
         description, 
-        location, 
+        location, // เก็บพิกัดที่คุณ Yok ปักหมุด
         imageUrl, 
         status: "รอซ่อม", 
         createdAt: serverTimestamp() 
@@ -68,7 +70,7 @@ export default function CreateJob() {
       alert(`ส่งงานสำเร็จ! เลขงานของคุณคือ ${jobNo}`);
       router.push("/dashboard"); 
     } catch (error) {
-      console.error(error);
+      console.error("Submit error:", error);
       alert("เกิดข้อผิดพลาดในการส่งงาน");
     } finally { 
       setUploading(false); 
@@ -89,11 +91,12 @@ export default function CreateJob() {
             <div style={{ height: "100%", background: "#eee", textAlign: "center", paddingTop: "140px" }}>เตรียมแผนที่...</div>
           )}
         </div>
+        <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>พิกัดปัจจุบัน: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
       </div>
 
       <div style={{ marginBottom: "15px" }}>
-        <label>ลักษณะที่แตก:</label>
-        <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ccc" }}>
+        <label style={{ fontWeight: "bold" }}>ลักษณะงาน:</label>
+        <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ccc", marginTop: "5px" }}>
           <option>ท่อแตกรั่ว</option>
           <option>น้ำไม่ไหล</option>
           <option>ประตูน้ำชำรุด</option>
@@ -102,19 +105,19 @@ export default function CreateJob() {
       </div>
 
       <div style={{ marginBottom: "15px" }}>
-        <label>จุดสังเกต/ที่อยู่:</label>
+        <label style={{ fontWeight: "bold" }}>จุดสังเกต/ที่อยู่:</label>
         <textarea 
           value={description} 
           onChange={(e) => setDescription(e.target.value)} 
           placeholder="ระบุพิกัดบ้านหรือจุดใกล้เคียง"
-          style={{ width: "100%", padding: "10px", height: "60px", borderRadius: "8px", border: "1px solid #ccc" }} 
+          style={{ width: "100%", padding: "10px", height: "60px", borderRadius: "8px", border: "1px solid #ccc", marginTop: "5px" }} 
         />
       </div>
 
       <div style={{ marginBottom: "15px", border: "2px dashed #ccc", padding: "15px", borderRadius: "10px", textAlign: "center", backgroundColor: "#fafafa" }}>
-        <label style={{ display: "block", marginBottom: "10px" }}>📸 ถ่ายภาพสภาพหน้างาน:</label>
+        <label style={{ display: "block", marginBottom: "10px", fontWeight: "bold" }}>📸 ถ่ายภาพสภาพหน้างาน:</label>
         <input type="file" accept="image/*" capture="environment" onChange={handleUploadImage} />
-        {uploading && <p style={{ color: "orange", marginTop: "10px" }}>กำลังอัปโหลดรูปภาพ...</p>}
+        {uploading && <p style={{ color: "orange", marginTop: "10px" }}>กำลังดำเนินการ...</p>}
         {imageUrl && <img src={imageUrl} alt="preview" style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }} />}
       </div>
 
@@ -133,7 +136,7 @@ export default function CreateJob() {
           cursor: "pointer"
         }}
       >
-        {uploading ? "กรุณารอสักครู่..." : "ยืนยันการเปิดงาน"}
+        {uploading ? "กำลังบันทึกข้อมูล..." : "ยืนยันการเปิดงาน"}
       </button>
     </div>
   );
