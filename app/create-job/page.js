@@ -3,39 +3,36 @@ import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-// นำเข้า Leaflet (แผนที่ฟรี)
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import dynamic from "next/dynamic"; // เพิ่มตัวนี้มาช่วยแก้จอขาว
 
-// แก้ไข Icon หมุดให้แสดงผลถูกต้อง
-const icon = L.icon({ iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png", iconSize: [25, 41], iconAnchor: [12, 41] });
+// 1. โหลด Map แบบ Dynamic (โหลดเฉพาะฝั่ง Client เท่านั้น)
+const MapWithNoSSR = dynamic(
+  () => import("../../components/MapPicker"), // เราจะแยกโค้ดแผนที่ไปไว้อีกไฟล์
+  { 
+    ssr: false,
+    loading: () => <div style={{ height: "300px", backgroundColor: "#eee", textAlign: "center", paddingTop: "140px" }}>กำลังโหลดแผนที่...</div> 
+  }
+);
 
 export default function CreateJob() {
   const router = useRouter();
-  const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 }); // ค่าเริ่มต้นแถวท่าเรือ
+  const [location, setLocation] = useState({ lat: 14.5826, lng: 100.6441 });
   const [description, setDescription] = useState("");
   const [jobType, setJobType] = useState("ท่อแตกรั่ว");
   const [isUrgent, setIsUrgent] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // ส่วนประกอบสำหรับ "คลิกแล้วหมุดย้ายตาม"
-  function LocationMarker() {
-    useMapEvents({
-      click(e) {
-        setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-      },
-    });
-    return location.lat ? <Marker position={[location.lat, location.lng]} icon={icon} /> : null;
-  }
-
-  const getMyLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+  const handleSubmit = async () => {
+    if (!location.lat || !imageUrl) { alert("กรุณาระบุพิกัดและถ่ายรูปครับ"); return; }
+    try {
+      setUploading(true);
+      await addDoc(collection(db, "jobs"), { 
+        jobType, description, location, imageUrl, isUrgent, status: "รอซ่อม", createdAt: serverTimestamp() 
       });
-    }
+      alert("ส่งงานสำเร็จ!");
+      router.push("/dashboard"); 
+    } finally { setUploading(false); }
   };
 
   const handleUploadImage = async (e) => {
@@ -52,38 +49,22 @@ export default function CreateJob() {
     } finally { setUploading(false); }
   };
 
-  const handleSubmit = async () => {
-    if (!location.lat || !imageUrl) { alert("กรุณาระบุพิกัดและถ่ายรูปครับ"); return; }
-    try {
-      setUploading(true);
-      await addDoc(collection(db, "jobs"), { jobType, description, location, imageUrl, isUrgent, status: "รอซ่อม", createdAt: serverTimestamp() });
-      alert("ส่งงานสำเร็จ!");
-      router.push("/dashboard"); 
-    } finally { setUploading(false); }
-  };
-
   return (
     <div style={{ padding: "15px", maxWidth: "600px", margin: "auto", fontFamily: "sans-serif" }}>
       <h2 style={{ textAlign: "center", color: "#0056b3" }}>📋 เปิดงานซ่อม (กปภ.ท่าเรือ)</h2>
       <hr />
 
-      {/* แผนที่สำหรับจิ้มเลือกจุด */}
       <div style={{ marginBottom: "15px" }}>
-        <label style={{ fontWeight: "bold" }}>📍 เลือกจุดที่ท่อแตกบนแผนที่ (จิ้มเพื่อย้ายหมุด):</label>
+        <label style={{ fontWeight: "bold" }}>📍 เลือกจุดที่ท่อแตกบนแผนที่:</label>
         <div style={{ height: "300px", width: "100%", marginTop: "10px", borderRadius: "10px", overflow: "hidden", border: "2px solid #007bff" }}>
-          <MapContainer center={[14.5826, 100.6441]} zoom={13} style={{ height: "100%", width: "100%" }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <LocationMarker />
-          </MapContainer>
+          {/* เรียกใช้ Component แผนที่ที่เราแยกไว้ */}
+          <MapWithNoSSR location={location} setLocation={setLocation} />
         </div>
-        <button onClick={getMyLocation} style={{ width: "100%", padding: "10px", marginTop: "10px", backgroundColor: "#f8f9fa", border: "1px solid #ccc", borderRadius: "5px" }}>
-          🎯 ใช้พิกัดปัจจุบันของฉัน
-        </button>
       </div>
 
       <div style={{ marginBottom: "15px" }}>
         <label>ลักษณะที่แตก:</label>
-        <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={{ width: "100%", padding: "12px", marginTop: "5px" }}>
+        <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={{ width: "100%", padding: "12px" }}>
           <option>ท่อแตกรั่ว</option>
           <option>น้ำไม่ไหล</option>
           <option>ประตูน้ำชำรุด</option>
