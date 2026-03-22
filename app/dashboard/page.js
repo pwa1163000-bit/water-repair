@@ -5,10 +5,10 @@ import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
-  const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
+  const [stats, setStats] = useState({ total: 0, pending: 0 });
 
   useEffect(() => {
-    // ดึงข้อมูล Real-time จาก jobs และเรียงตามเวลาที่สร้าง (เก่าไปใหม่ เพื่อให้เลขรันไม่สลับกัน)
+    // ดึงข้อมูลเรียงตามเวลาที่สร้าง (จากเก่าไปใหม่ เพื่อให้เลขรันลำดับไม่สลับกัน)
     const q = query(collection(db, "jobs"), orderBy("createdAt", "asc"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -18,12 +18,9 @@ export default function Dashboard() {
       }));
 
       setJobs(jobList);
-
-      // คำนวณสถิติ
       setStats({
         total: jobList.length,
-        pending: jobList.filter(j => j.status === "รอซ่อม").length,
-        completed: jobList.filter(j => j.status === "ซ่อมเสร็จแล้ว").length
+        pending: jobList.filter(j => j.status === "รอซ่อม").length
       });
     });
 
@@ -31,31 +28,68 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div style={{ padding: "20px", fontFamily: "sans-serif", backgroundColor: "#f0f2f5", minHeight: "100vh" }}>
-      <h2 style={{ textAlign: "center", color: "#0056b3" }}>📊 ติดตามงานซ่อม กปภ.ท่าเรือ</h2>
+    <div style={{ padding: "15px", fontFamily: "sans-serif", backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
+      <h2 style={{ textAlign: "center", color: "#0056b3", marginBottom: "20px" }}>📊 งานซ่อม กปภ.ท่าเรือ</h2>
       
-      {/* ส่วนแสดงตัวเลขสรุป */}
+      {/* ส่วนสรุปตัวเลข */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <div style={{ flex: 1, padding: "15px", background: "#fff", borderRadius: "10px", textAlign: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-          <div style={{ color: "#666", fontSize: "14px" }}>งานทั้งหมด</div>
+          <div style={{ fontSize: "14px", color: "#666" }}>งานทั้งหมด</div>
           <div style={{ fontSize: "24px", fontWeight: "bold" }}>{stats.total}</div>
         </div>
-        <div style={{ flex: 1, padding: "15px", background: "#fff", borderRadius: "10px", textAlign: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", borderBottom: "4px solid red" }}>
-          <div style={{ color: "#666", fontSize: "14px" }}>รอซ่อม</div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "red" }}>{stats.pending}</div>
+        <div style={{ flex: 1, padding: "15px", background: "#fff", borderRadius: "10px", textAlign: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", borderBottom: "4px solid #dc3545" }}>
+          <div style={{ fontSize: "14px", color: "#666" }}>รอซ่อม</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#dc3545" }}>{stats.pending}</div>
         </div>
       </div>
 
-      {/* รายการงานซ่อม */}
-      <div>
+      {/* รายการงาน (เรียงใหม่ล่าสุดขึ้นก่อน) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {[...jobs].reverse().map((job, index) => {
-          // คำนวณเลขรันงาน: ใช้ลำดับในอาเรย์มาทำ 001, 002...
-          // jobs.length - index เพื่อให้งานใหม่ล่าสุดได้เลขรันล่าสุด
+          // คำนวณเลขรันงาน: (จำนวนทั้งหมด - ลำดับ)
           const runNo = (jobs.length - index).toString().padStart(3, '0');
-          const jobNoDisplay = job.jobNo || `${runNo}/69`;
+          const displayNo = job.jobNo || `${runNo}/69`;
 
           return (
-            <div key={job.id} style={{ padding: "15px", background: "#fff", borderRadius: "12px", marginBottom: "15px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <span style={{ backgroundColor: "#
+            <div key={job.id} style={{ padding: "15px", background: "#fff", borderRadius: "12px", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span style={{ backgroundColor: "#0056b3", color: "#fff", padding: "2px 8px", borderRadius: "5px", fontSize: "13px", fontWeight: "bold" }}>
+                  เลขงาน: {displayNo}
+                </span>
+                <span style={{ fontSize: "14px", fontWeight: "bold", color: job.status === "รอซ่อม" ? "#dc3545" : "#28a745" }}>
+                  {job.status}
+                </span>
+              </div>
+
+              <h3 style={{ margin: "5px 0", fontSize: "17px" }}>{job.jobType}</h3>
+              <p style={{ margin: "0 0 10px 0", color: "#555", fontSize: "14px" }}>{job.description || "ไม่ได้ระบุรายละเอียด"}</p>
+              
+              <div style={{ fontSize: "12px", color: "#999", marginBottom: "10px" }}>
+                📅 {job.createdAt?.toDate().toLocaleString('th-TH')}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${job.location?.lat},${job.location?.lng}`}
+                  target="_blank"
+                  style={{ flex: 1, textAlign: "center", padding: "8px", borderRadius: "6px", border: "1px solid #007bff", color: "#007bff", textDecoration: "none", fontSize: "14px" }}
+                >
+                  📍 นำทาง
+                </a>
+                {job.imageUrl && (
+                  <a 
+                    href={job.imageUrl}
+                    target="_blank"
+                    style={{ flex: 1, textAlign: "center", padding: "8px", borderRadius: "6px", border: "1px solid #6c757d", color: "#6c757d", textDecoration: "none", fontSize: "14px" }}
+                  >
+                    🖼️ ดูรูป
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
